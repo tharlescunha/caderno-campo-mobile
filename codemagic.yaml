@@ -1,0 +1,81 @@
+# Codemagic · IPA sem assinatura para instalar no iPhone com Sideloadly (Apple ID gratuito).
+# Guia: guia_react_native_expo_codemagic_iphone13.md (seções 9 a 12).
+# Sem "triggering": só roda quando você clicar em "Start new build" (economiza minutos).
+
+workflows:
+  ios-ipa-sem-assinatura:
+    name: iOS · IPA sem assinatura (Sideloadly)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 22
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Instalar dependências JavaScript
+        script: |
+          npm ci
+
+      - name: Conferir o projeto (expo-doctor)
+        script: |
+          npx expo-doctor || echo "expo-doctor com avisos (não bloqueia)"
+
+      - name: Gerar o projeto nativo do iOS (expo prebuild)
+        script: |
+          npx expo prebuild --platform ios --clean --no-install
+
+      - name: Instalar CocoaPods
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          pod install
+
+      - name: Descobrir workspace e scheme
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/ios"
+          WORKSPACE="$(ls -d *.xcworkspace | head -n 1)"
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          echo "WORKSPACE=$WORKSPACE"
+          echo "SCHEME=$SCHEME"
+          xcodebuild -list -workspace "$WORKSPACE"
+          echo "XC_WORKSPACE=$WORKSPACE" >> "$CM_ENV"
+          echo "XC_SCHEME=$SCHEME" >> "$CM_ENV"
+
+      - name: Compilar sem assinatura (Release)
+        script: |
+          set -eo pipefail
+          cd "$CM_BUILD_DIR/ios"
+          xcodebuild \
+            -workspace "$XC_WORKSPACE" \
+            -scheme "$XC_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$CM_BUILD_DIR/ios-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee "$CM_BUILD_DIR/xcodebuild.log"
+
+      - name: Empacotar o .app em .ipa
+        script: |
+          set -e
+          APP_PATH="$(find "$CM_BUILD_DIR/ios-build/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$APP_PATH" ]; then
+            echo "Erro: arquivo .app não encontrado."
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH"
+          rm -rf "$CM_BUILD_DIR/ipa"
+          mkdir -p "$CM_BUILD_DIR/ipa/Payload"
+          cp -R "$APP_PATH" "$CM_BUILD_DIR/ipa/Payload/"
+          cd "$CM_BUILD_DIR/ipa"
+          zip -qr "$CM_BUILD_DIR/CadernoDeCampo-unsigned.ipa" Payload
+          test -s "$CM_BUILD_DIR/CadernoDeCampo-unsigned.ipa"
+          ls -lh "$CM_BUILD_DIR/CadernoDeCampo-unsigned.ipa"
+
+    artifacts:
+      - CadernoDeCampo-unsigned.ipa
+      - xcodebuild.log

@@ -8,8 +8,11 @@
     "userInterfaceStyle": "automatic",
     "scheme": "cadernodecampo",
     "ios": {
+      "bundleIdentifier": "br.com.tharles.cadernodecampo",
+      "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "pt-BR",
         "CFBundleLocalizations": [
           "pt-BR"
@@ -32,6 +35,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/sem-push.js",
       "expo-router",
       "expo-font",
       [
