@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 /** Endereço da API. Em desenvolvimento use o IP do computador na rede (o celular não enxerga 127.0.0.1). */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.100.103:3000/api/v1';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api-campo.araujocunha.online/api/v1';
 
 const REFRESH_KEY = 'refresh_token';
 
